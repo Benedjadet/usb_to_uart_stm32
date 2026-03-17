@@ -1,0 +1,36 @@
+{
+  "build": {
+    "core": "stm32",
+    "cpu": "cortex-m4",
+    "extra_flags": "-DSTM32F103xG -DSTM32F1",
+    "f_cpu": "72000000L",
+    "mcu": "GD32f303CGT6",
+    "product_line": "GD32f303CG"
+  },
+  "connectivity": [
+    "can"
+  ],
+  "debug": {
+    "jlink_device": "GD32f303CG",
+    "openocd_target": "stm32f3x",
+    "svd_path": "STM32F30x.svd"
+  },
+  "frameworks": [
+    "cmsis",
+    "stm32cube"
+  ],
+  "name": "GD32f303CG (96k RAM. 512k х 2 Flash)",
+  "upload": {
+    "maximum_ram_size": 98304,
+    "maximum_size": 1048576,
+    "protocol": "stlink",
+    "protocols": [
+      "jlink",
+      "cmsis-dap",
+      "stlink",
+      "blackmagic"
+    ]
+  },
+  "url": "https://www.gigadevice.com/product/mcu/arm-cortex-m4/gd32f303cgt6",
+  "vendor": "Generic"
+}
