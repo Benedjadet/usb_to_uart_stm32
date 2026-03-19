@@ -1,0 +1,10 @@
+{
+	"editor.cursorBlinking": "blink",
+	// "files.readonlyInclude": {
+	// 	"**/Source/Libraries/**/*": true,
+	// 	"**/Source/Libraries/CRC/crc16.c": true,
+	// },
+	// "files.readonlyExclude": {
+	// 	"**/Source/Libraries/TraceRecorder": true
+	// }
+}
