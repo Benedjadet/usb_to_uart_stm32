@@ -62,7 +62,8 @@ void CDC_Receive_FC_CB(uint8_t *Buf, uint16_t Len)
 		Error_Handler();
 	}
 
-	if (res == BUFFER_OVERRIDE) {
+	if (res == BUFFER_OVERRIDE)
+	{
 		// Размер посылки превышает размер буфера приема. Непонятно что делат.
 	}
 }
@@ -71,6 +72,14 @@ void UART_IdleCallback(UART_HandleTypeDef *huart)
 {
 	UNUSED(huart);
 }
+
+// void UART_TcCallback(UART_HandleTypeDef *huart)
+// {
+// 	UNUSED(huart);
+
+// 	gpio_rs485_dir_set(GPIO_PIN_RESET);
+// 	uart_tx_busy = false;
+// }
 
 /**
  * @brief USART Error Callback.
@@ -92,6 +101,9 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
 	if (huart->Instance == USART1)
 	{
+		// __HAL_UART_CLEAR_FLAG(huart, UART_FLAG_TC);
+		// __HAL_UART_ENABLE_IT(huart, UART_IT_TC);
+		gpio_rs485_dir_set(GPIO_PIN_RESET);
 		uart_tx_busy = false;
 	}
 }
@@ -148,7 +160,7 @@ void buffer_test(void)
 	// Считываем все.
 	data_size = 32;
 	uint8_t data_buf2[32] = {0};
-	if (buffer_get(&hbuf, data_buf2, &data_size)!= BUFFER_OK)
+	if (buffer_get(&hbuf, data_buf2, &data_size) != BUFFER_OK)
 	{
 		// Ошибка чтения всего буфера.
 		Error_Handler();
@@ -227,7 +239,7 @@ int main(void)
 	while (1)
 	{
 		// Отправка данных в UART.
-		if (!uart_tx_busy)
+		if (uart_tx_busy == false)
 		{
 			if (buffer_len(&uart_tx_buf, &tx_len) != BUFFER_OK)
 			{
@@ -244,9 +256,12 @@ int main(void)
 				{
 					Error_Handler();
 				}
+				gpio_rs485_dir_set(GPIO_PIN_SET);
 
-				HAL_UART_Transmit_DMA(&huart1, tx_buf, tx_len);
+				// Этот флаг должен выставляться раньше чем запускается передача по DMA.
+				// Потому что если будет иначе прерывание которое его сбрасывает произойдет раньше чем он установится.
 				uart_tx_busy = true;
+				HAL_UART_Transmit_DMA(&huart1, tx_buf, tx_len);
 			}
 		}
 

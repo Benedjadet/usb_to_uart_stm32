@@ -7,8 +7,13 @@
 extern "C" {
 #endif
 
+
+
+
+
 void gpio_init(void);
 void gpio_debug_led_toggle(void);
+void gpio_rs485_dir_set(GPIO_PinState state);
 
 extern void Error_Handler(void);
 
