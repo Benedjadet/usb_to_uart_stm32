@@ -24,3 +24,8 @@ void gpio_init(void)
 	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
 	HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 }
+
+
+void gpio_debug_led_toggle(void){
+	HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+}

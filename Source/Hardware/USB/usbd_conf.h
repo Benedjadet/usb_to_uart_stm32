@@ -10,9 +10,8 @@ extern "C"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "main.h"
-#include "stm32f1xx.h"
-#include "stm32f1xx_hal.h"
+#include "usb_device_conf.h"
+
 
 #define USBD_MAX_NUM_INTERFACES (1)
 #define USBD_MAX_NUM_CONFIGURATION (1)

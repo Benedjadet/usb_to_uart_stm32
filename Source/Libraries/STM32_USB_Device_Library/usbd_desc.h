@@ -11,7 +11,7 @@
 #define         DEVICE_ID2          (UID_BASE + 0x4)
 #define         DEVICE_ID3          (UID_BASE + 0x8)
 
-#define  USB_SIZ_STRING_SERIAL       0x1A
+#define  USB_SIZ_STRING_SERIAL       (50)
 
 // Descriptor for the Usb device.
 extern USBD_DescriptorsTypeDef FS_Desc;

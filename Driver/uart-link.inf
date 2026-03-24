@@ -1,0 +1,30 @@
+; UART-Link USB CDC INF
+; MFMC LLC
+
+[Version]
+Signature="$Windows NT$"
+Class=Ports
+ClassGuid={4D36E978-E325-11CE-BFC1-08002BE10318}
+Provider=%ManufacturerName%
+DriverVer=03/20/2026,1.0.0.0
+
+[Manufacturer]
+%ManufacturerName%=DeviceList,NTamd64,NTx86
+
+[DeviceList.NTamd64]
+%DeviceName%=Install, USB\VID_1209&PID_DB50
+
+[DeviceList.NTx86]
+%DeviceName%=Install, USB\VID_1209&PID_DB50
+
+[Install]
+Include=usbser.inf
+Needs=UsbSer_Install
+
+[Install.Services]
+Include=usbser.inf
+Needs=UsbSer_Install.Services
+
+[Strings]
+ManufacturerName="MFMC LLC"
+DeviceName="UART-Link (Virtual COM Port)"

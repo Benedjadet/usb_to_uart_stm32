@@ -8,6 +8,7 @@ extern "C" {
 #endif
 
 void gpio_init(void);
+void gpio_debug_led_toggle(void);
 
 extern void Error_Handler(void);
 

@@ -2,14 +2,6 @@
 #include "usbd_desc.h"
 #include "usbd_conf.h"
 
-#define USBD_VID 0x1209
-#define USBD_LANGID_STRING 1033
-#define USBD_MANUFACTURER_STRING "MFMC LLC"
-#define USBD_PID_FS 0xDB50
-#define USBD_PRODUCT_STRING_FS "UART-Link over STM32"
-#define USBD_CONFIGURATION_STRING_FS "CDC Config"
-#define USBD_INTERFACE_STRING_FS "CDC Interface"
-
 static void Get_SerialNum(void);
 static void IntToUnicode(uint32_t value, uint8_t *pbuf, uint8_t len);
 
@@ -196,12 +188,13 @@ static void Get_SerialNum(void)
 	deviceserial1 = *(uint32_t *)DEVICE_ID2;
 	deviceserial2 = *(uint32_t *)DEVICE_ID3;
 
-	deviceserial0 += deviceserial2;
+	//deviceserial0 += deviceserial2;
 
 	if (deviceserial0 != 0)
 	{
-		IntToUnicode(deviceserial0, &USBD_StringSerial[2], 8);
-		IntToUnicode(deviceserial1, &USBD_StringSerial[18], 4);
+		IntToUnicode(deviceserial0, &USBD_StringSerial[2], 16);
+		IntToUnicode(deviceserial1, &USBD_StringSerial[18], 16);
+		IntToUnicode(deviceserial2, &USBD_StringSerial[34], 16);
 	}
 }
 

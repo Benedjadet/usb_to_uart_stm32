@@ -8,21 +8,35 @@
 #include "rcc.h"
 #include "gpio.h"
 
-uint8_t uart_tx_data[2048] = {0};
+// UART TX buffer size.
+#define UART_TX_BUF_SIZE (32767)
+
+// UART RX buffer size.
+#define UART_RX_BUF_SIZE (32767)
+
+// UART TX buffer.
+uint8_t uart_tx_data[UART_TX_BUF_SIZE] = {0};
+
+// Ring TX buffer handler.
 buffer_handle_t uart_tx_buf = {0};
 
-uint8_t uart_rx_data[2048] = {0};
-uint8_t uart_rx_byte = 0;
+// UART TX busy flag.
+boolean_t uart_tx_busy = false;
+
+// UART RX buffer.
+uint8_t uart_rx_data[UART_RX_BUF_SIZE] = {0};
+
+// Ring RX buffer handler.
 buffer_handle_t uart_rx_buf = {0};
 
-void HAL_MspInit(void);
-
-
+// UART port configuration.
 USBD_CDC_LineCodingTypeDef uart_linecoding = {
 	.bitrate = 9600,
 	.format = 0,	 // 1 stop bit
 	.paritytype = 0, // none
 	.datatype = 8};
+
+void HAL_MspInit(void);
 
 uint8_t CDC_SetLineCoding_CB(USBD_CDC_LineCodingTypeDef linecoding)
 {
@@ -40,22 +54,22 @@ USBD_CDC_LineCodingTypeDef CDC_GetLineCoding_CB(void)
 
 void CDC_Receive_FC_CB(uint8_t *Buf, uint16_t Len)
 {
-	buffer_append(&uart_tx_buf, Buf, Len);
+	uint8_t res = buffer_append(&uart_tx_buf, Buf, Len);
+
+	if (res == BUFFER_NOINITED || res == BUFFER_NULL_HANDLE)
+	{
+		// Неверное использование буффера.
+		Error_Handler();
+	}
+
+	if (res == BUFFER_OVERRIDE) {
+		// Размер посылки превышает размер буфера приема. Непонятно что делат.
+	}
 }
 
-/**
- * @brief USART Receive Complite Callback.
- * @param huart USART Handler.
- */
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+void UART_IdleCallback(UART_HandleTypeDef *huart)
 {
-	if (huart->Instance == USART1)
-	{
-		buffer_append(&uart_rx_buf, &uart_rx_byte, 1);
-
-		// ПЕРЕЗАПУСК ПРИЁМА (обязательно!)
-		HAL_UART_Receive_IT(&huart1, &uart_rx_byte, 1);
-	}
+	UNUSED(huart);
 }
 
 /**
@@ -67,7 +81,111 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 	if (huart->Instance == USART1)
 	{
 		uart_reset_ore(huart);
-		HAL_UART_Receive_IT(&huart1, &uart_rx_byte, 1);
+		HAL_UART_Receive_DMA(&huart1, uart_rx_data, UART_RX_BUF_SIZE);
+	}
+}
+/**
+ * @brief  USART Transmit Complete Callback.
+ * @param huart USART Handler.
+ */
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+{
+	if (huart->Instance == USART1)
+	{
+		uart_tx_busy = false;
+	}
+}
+
+/**
+ * @brief DMA Buffer Start Position.
+ * @param handle Ring Buffer Handler.
+ * @return Start Position Index.
+ */
+uint32_t dma_istart_cb(void *handle)
+{
+	return (uint32_t)(UART_RX_BUF_SIZE - __HAL_DMA_GET_COUNTER(huart1.hdmarx));
+}
+
+void buffer_test(void)
+{
+	uint8_t buffer[32] = {0};
+
+	buffer_handle_t hbuf = {0};
+	buffer_init(&hbuf, buffer, sizeof(buffer), NULL, NULL);
+
+	// Проверка перехода через край.
+	// -------------------------------------------------------------------------
+
+	// Записываем весь буффер.
+	if (buffer_append(&hbuf, (uint8_t *)"11111111111111111111111111111111", 24) != BUFFER_OK)
+	{
+		// Ошибка при записи буффера.
+		Error_Handler();
+	}
+
+	// Считываем половину.
+	uint8_t data_buf1[128] = {0};
+	size_t data_size = 16;
+	if (buffer_get(&hbuf, data_buf1, &data_size) != BUFFER_OK)
+	{
+		// Ошибка при чтении буфера.
+		Error_Handler();
+	}
+
+	// Записываем четверть.
+	if (buffer_append(&hbuf, (uint8_t *)"2222222222", 10) != BUFFER_OK)
+	{
+		// Ошибка при записи через границу.
+		Error_Handler();
+	}
+
+	if (hbuf.crossed_border == 0)
+	{
+		// Не установлен флаг перехода через границу
+		Error_Handler();
+	}
+
+	// Считываем все.
+	data_size = 32;
+	uint8_t data_buf2[32] = {0};
+	if (buffer_get(&hbuf, data_buf2, &data_size)!= BUFFER_OK)
+	{
+		// Ошибка чтения всего буфера.
+		Error_Handler();
+	}
+
+	if (hbuf.crossed_border == 1)
+	{
+		// Не сброшен флаг прехода через границу.
+		Error_Handler();
+	}
+
+	if (data_size != 18)
+	{
+		// Неверно посчитано содержимое буфера.
+		Error_Handler();
+	}
+
+	// Очищаем буфер.
+	if (buffer_flush(&hbuf) != BUFFER_OK)
+	{
+		// Ошибка очистки буфера.
+		Error_Handler();
+	}
+
+	// Проверяем переполнение буфера.
+	if (buffer_append(&hbuf, (uint8_t *)"11111111111111111111111111111111", 32) != BUFFER_OK)
+	{
+		// Ошибка записи буфера.
+		Error_Handler();
+	}
+
+	uint8_t res = buffer_append(&hbuf, (uint8_t *)"11111111111111111111111111111111", 32);
+
+	if (res != BUFFER_OVERRIDE)
+	{
+		// Функция не вернула флаг переполнения.
+		Error_Handler();
 	}
 }
 
@@ -83,8 +201,10 @@ int main(void)
 	gpio_init();
 	uart_init(uart_linecoding.bitrate, uart_linecoding.paritytype, uart_linecoding.format);
 
-	buffer_init(&uart_tx_buf, uart_tx_data, sizeof(uart_tx_data));
-	buffer_init(&uart_rx_buf, uart_rx_data, sizeof(uart_rx_data));
+	buffer_init(&uart_tx_buf, uart_tx_data, sizeof(uart_tx_data), NULL, NULL);
+	buffer_init(&uart_rx_buf, uart_rx_data, sizeof(uart_rx_data), NULL, dma_istart_cb);
+
+	buffer_test();
 
 	usb_device_init();
 
@@ -96,31 +216,79 @@ int main(void)
 	size_t rx_len = 0;
 	uint8_t rx_buf[256] = {0};
 
-	HAL_UART_Receive_IT(&huart1, &uart_rx_byte, 1);
+	// Запускаем прием данных через DMA.
+	HAL_UART_Receive_DMA(&huart1, uart_rx_data, UART_RX_BUF_SIZE);
+
+	// Включаем прерывание по бездействию линии.
+	__HAL_UART_ENABLE_IT(&huart1, UART_IT_IDLE);
+
+	boolean_t usb_busy_flag = false;
 
 	while (1)
 	{
-		tx_len = buffer_len(&uart_tx_buf);
-
-		if (tx_len != 0)
+		// Отправка данных в UART.
+		if (!uart_tx_busy)
 		{
-			buffer_get(&uart_tx_buf, tx_buf, &tx_len);
-			HAL_UART_Transmit_IT(&huart1, tx_buf, tx_len);
+			if (buffer_len(&uart_tx_buf, &tx_len) != BUFFER_OK)
+			{
+				Error_Handler();
+			}
+
+			if (tx_len > 256)
+			{
+				tx_len = 256;
+			}
+			if (tx_len != 0)
+			{
+				if (buffer_get(&uart_tx_buf, tx_buf, &tx_len) != BUFFER_OK)
+				{
+					Error_Handler();
+				}
+
+				HAL_UART_Transmit_DMA(&huart1, tx_buf, tx_len);
+				uart_tx_busy = true;
+			}
 		}
 
-		rx_len = buffer_len(&uart_rx_buf);
-
-		if (rx_len != 0)
+		if (!usb_busy_flag)
 		{
-			buffer_get(&uart_rx_buf, rx_buf, &rx_len);
-			CDC_Transmit_FS(rx_buf, (uint16_t)rx_len);
+			if (buffer_len(&uart_rx_buf, &rx_len) != BUFFER_OK)
+			{
+				Error_Handler();
+			}
+
+			if (rx_len > CDC_DATA_FS_MAX_PACKET_SIZE)
+			{
+				rx_len = CDC_DATA_FS_MAX_PACKET_SIZE;
+			}
+
+			if (rx_len != 0)
+			{
+				if (buffer_get(&uart_rx_buf, rx_buf, &rx_len) != BUFFER_OK)
+				{
+					Error_Handler();
+				}
+
+				if (CDC_Transmit_FS(rx_buf, (uint16_t)rx_len) != USBD_OK)
+				{
+					usb_busy_flag = true;
+				}
+			}
+		}
+		else
+		{
+			if (CDC_Transmit_FS(rx_buf, (uint16_t)rx_len) == USBD_OK)
+			{
+				usb_busy_flag = false;
+			}
 		}
 
+		// Светодиодная индикация.
 		ticks++;
 		if (ticks >= 1000)
 		{
 			ticks = 0;
-			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+			gpio_debug_led_toggle();
 		}
 
 		HAL_Delay(1);
