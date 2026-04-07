@@ -128,6 +128,7 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t *pbuf, uint16_t length)
 	case CDC_SET_CONTROL_LINE_STATE:
 
 	{
+		CDC_SetControlLineState_CB(pbuf);
 		break;
 	}
 

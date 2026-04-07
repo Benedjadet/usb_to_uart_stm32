@@ -197,10 +197,11 @@ static void Get_SerialNum(void)
 }
 
 /**
- * @brief  Convert Hex 32Bits value into char
+ * @brief  Convert Hex 32Bits value into char.
+ * Each Simbol take 2 bytes.
  * @param  value: value to convert
  * @param  pbuf: pointer to the buffer
- * @param  len: buffer length
+ * @param  len: buffer length in simbols.
  * @retval None
  */
 static void IntToUnicode(uint32_t value, uint8_t *pbuf, uint8_t len)

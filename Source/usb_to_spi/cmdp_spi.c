@@ -9,24 +9,11 @@
 // Parse an incoming slcan command from the USB CDC port
 int32_t cmdp_spi_parse(uint8_t *buf, uint8_t len)
 {
-	// Convert from ASCII (2nd character to end).
-	for (uint8_t i = 1; i < len; i++)
-	{
-		// Lowercase letters
-		if (buf[i] >= 'a')
-			buf[i] = buf[i] - 'a' + 10;
-		// Uppercase letters
-		else if (buf[i] >= 'A')
-			buf[i] = buf[i] - 'A' + 10;
-		// Numbers
-		else
-			buf[i] = buf[i] - '0';
-	}
-
 	// Handle each incoming command.
 	switch (buf[0])
 	{
 
+	// Help.
 	case 'H':
 	case 'h':
 		return cmdp_spi_help();
@@ -47,9 +34,8 @@ int32_t cmdp_spi_parse(uint8_t *buf, uint8_t len)
 	case 'M':
 		return cmdp_spi_mode(buf[1]);
 
-
 	case 'g':
-		return cmdp_spi_gpio(buf[1]);
+		return cmdp_spi_gpio(&buf[1], len - 1);
 
 	// Report firmware version.
 	case 'v':
@@ -78,6 +64,27 @@ int32_t cmdp_spi_parse(uint8_t *buf, uint8_t len)
 	return 0;
 }
 
+
+
+void ascii_to_hex_int(uint8_t* buf, uint32_t len)
+{
+	// Convert from ASCII (2nd character to end).
+	for (uint8_t i = 1; i < len; i++)
+	{
+		// Lowercase letters
+		if (buf[i] >= 'a')
+			buf[i] = buf[i] - 'a' + 10;
+		// Uppercase letters
+		else if (buf[i] >= 'A')
+			buf[i] = buf[i] - 'A' + 10;
+		// Numbers
+		else
+			buf[i] = buf[i] - '0';
+	}
+}
+
+
+
 __weak int32_t cmdp_spi_open(void)
 {
 	return 0;
@@ -100,9 +107,10 @@ __weak int32_t cmdp_spi_mode(uint8_t mode)
 	return 0;
 }
 
-__weak int32_t cmdp_spi_gpio(uint8_t gpio)
+__weak int32_t cmdp_spi_gpio(uint8_t *data, uint32_t len)
 {
-	UNUSED(gpio);
+	UNUSED(data);
+	UNUSED(len);
 	return 0;
 }
 

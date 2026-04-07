@@ -26,6 +26,9 @@ extern "C"
 	// CDC Get Line Coding.
 	extern void CDC_GetLineCoding_CB(uint8_t* buf);
 
+	// CDC Set Control Line State.
+	extern void CDC_SetControlLineState_CB(uint8_t* pbuf);
+
 	// CDC Transmit.
 	uint8_t CDC_Transmit_FS(uint8_t *Buf, uint16_t Len);
 

@@ -8,8 +8,8 @@
 #include "rcc.h"
 #include "gpio.h"
 #include "cmdp_spi.h"
-
-
+#include "stdio.h"
+#include "cli.h"
 
 // UART TX buffer.
 uint8_t spi_tx_data[SPI_TX_BUF_SIZE] = {0};
@@ -21,11 +21,16 @@ boolean_t spi_tx_busy = false;
 uint8_t spi_rx_data[SPI_RX_BUF_SIZE] = {0};
 
 
+uint8_t from_console_buffer[2048] = {0};
+
+buffer_handle_t from_console = {0};
+
+
 uint8_t to_console_buffer[2048] = {0};
 
 buffer_handle_t to_console = {0};
 
-const gpio_t gpios[SPI_GPIO_MAX] = {
+gpio_t gpios[SPI_GPIO_MAX] = {
 	{SPI_CS1_PORT, SPI_CS1_PIN},
 	{SPI_CS2_PORT, SPI_CS2_PIN},
 	{SPI_CS3_PORT, SPI_CS3_PIN},
@@ -33,6 +38,8 @@ const gpio_t gpios[SPI_GPIO_MAX] = {
 	{SPI_CS5_PORT, SPI_CS5_PIN},
 };
 
+
+uint8_t connected = 0;
 
 
 // Заглушка для USB.
@@ -58,6 +65,16 @@ void cs_gpio_init(void)
 }
 
 
+
+
+int _write(int file, char *ptr, int len)
+{
+    buffer_append(&to_console, (uint8_t*)ptr, (size_t)len);
+    return len;
+}
+
+
+
 void HAL_MspInit(void);
 
 /**
@@ -70,6 +87,29 @@ uint8_t CDC_SetLineCoding_CB(USBD_CDC_LineCodingTypeDef linecoding)
 	// Нет необходимости в настройке порта.
 	return 0;
 }
+
+
+
+void CDC_SetControlLineState_CB(uint8_t* pbuf)
+{
+	if ((pbuf[2] & 0x01) && !connected)
+    {
+        connected = 1;
+        printf("\r\n");
+		printf("STM32 SPI CLI v1.0\r\n");
+		printf("Build: %s %s\r\n", __DATE__, __TIME__);
+		printf("Type 'help'\r\n");
+		printf("\r\n> ");
+		fflush(stdout);
+    }
+    else if (!(pbuf[2] & 0x01))
+    {
+        connected = 0;
+    }
+}
+
+
+
 
 /**
  * @brief Каллбэк когда CDC запрашивает настройки порта.
@@ -89,7 +129,8 @@ void CDC_GetLineCoding_CB(uint8_t* buf)
 
 void CDC_Receive_FC_CB(uint8_t *Buf, uint16_t Len)
 {
-	cmdp_spi_parse(Buf, Len);
+	//cmdp_spi_parse(Buf, Len);
+	buffer_append(&from_console, Buf, Len);
 }
 
 
@@ -112,7 +153,7 @@ int main(void)
 	uint32_t ticks = 0;
 
 	size_t tx_len = 0;
-	//uint8_t tx_buf[256] = {0};
+	uint8_t tx_buf[256] = {0};
 
 	size_t rx_len = 0;
 	uint8_t rx_buf[256] = {0};
@@ -120,11 +161,28 @@ int main(void)
 	boolean_t usb_busy_flag = false;
 
 	buffer_init(&to_console, to_console_buffer, sizeof(to_console_buffer), NULL, NULL);
-
+	buffer_init(&from_console, from_console_buffer, sizeof(from_console_buffer), NULL, NULL);
 
 
 	while (1)
 	{
+
+
+		if (buffer_len(&from_console, &tx_len) != BUFFER_OK)
+		{
+			Error_Handler();
+		}
+
+
+		if (tx_len != 0)
+		{
+			tx_len = 1;
+			buffer_get(&from_console, tx_buf, &tx_len);
+			CLI_Input(tx_buf[0]);
+		}
+
+
+
 		// Отправка данных в UART.
 		if (spi_tx_busy == false)
 		{
