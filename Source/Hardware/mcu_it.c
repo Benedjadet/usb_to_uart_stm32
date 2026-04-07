@@ -1,8 +1,4 @@
-#include "main.h"
 #include "mcu_it.h"
-
-extern PCD_HandleTypeDef hpcd_USB_FS;
-extern UART_HandleTypeDef huart1;
 
 /******************************************************************************/
 /*           Cortex-M3 Processor Interruption and Exception Handlers          */

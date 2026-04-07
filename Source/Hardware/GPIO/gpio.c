@@ -1,6 +1,5 @@
 
 #include "gpio.h"
-#include "gpio_conf.h"
 
 /**
  * @brief GPIO Initialization Function
@@ -23,13 +22,6 @@ void gpio_init(void)
 	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
 	HAL_GPIO_Init(DEBUG_LED_PORT, &GPIO_InitStruct);
 
-	// RS485 Direction control.
-	HAL_GPIO_WritePin(RS485_DIR_PORT, RS485_DIR_PIN, GPIO_PIN_RESET);
-
-	GPIO_InitStruct.Pin = RS485_DIR_PIN;
-	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-	HAL_GPIO_Init(RS485_DIR_PORT, &GPIO_InitStruct);
 }
 
 void gpio_debug_led_toggle(void)
@@ -37,7 +29,3 @@ void gpio_debug_led_toggle(void)
 	HAL_GPIO_TogglePin(DEBUG_LED_PORT, DEBUG_LED_PIN);
 }
 
-void gpio_rs485_dir_set(GPIO_PinState state)
-{
-	HAL_GPIO_WritePin(RS485_DIR_PORT, RS485_DIR_PIN, state);
-}

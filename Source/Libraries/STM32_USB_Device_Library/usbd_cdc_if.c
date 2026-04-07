@@ -122,18 +122,7 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t *pbuf, uint16_t length)
 
 	case CDC_GET_LINE_CODING:
 	{
-
-		USBD_CDC_LineCodingTypeDef linecoding = CDC_GetLineCoding_CB();
-
-		pbuf[0] = (uint8_t)(linecoding.bitrate);
-		pbuf[1] = (uint8_t)(linecoding.bitrate >> 8);
-		pbuf[2] = (uint8_t)(linecoding.bitrate >> 16);
-		pbuf[3] = (uint8_t)(linecoding.bitrate >> 24);
-
-		pbuf[4] = linecoding.format;
-		pbuf[5] = linecoding.paritytype;
-		pbuf[6] = linecoding.datatype;
-
+		CDC_GetLineCoding_CB(pbuf);
 		break;
 	}
 	case CDC_SET_CONTROL_LINE_STATE:

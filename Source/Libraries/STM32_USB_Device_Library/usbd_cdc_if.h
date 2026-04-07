@@ -24,7 +24,7 @@ extern "C"
 	extern uint8_t CDC_SetLineCoding_CB(USBD_CDC_LineCodingTypeDef linecoding);
 
 	// CDC Get Line Coding.
-	extern USBD_CDC_LineCodingTypeDef CDC_GetLineCoding_CB(void);
+	extern void CDC_GetLineCoding_CB(uint8_t* buf);
 
 	// CDC Transmit.
 	uint8_t CDC_Transmit_FS(uint8_t *Buf, uint16_t Len);

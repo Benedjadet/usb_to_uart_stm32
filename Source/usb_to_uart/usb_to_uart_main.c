@@ -1,8 +1,9 @@
 
-#include "main.h"
+#include "usb_to_uart_main.h"
 #include "usb_device.h"
 #include "usbd_cdc_if.h"
 #include "buffer.h"
+
 
 #include "uart1.h"
 #include "rcc.h"
@@ -37,6 +38,8 @@ USBD_CDC_LineCodingTypeDef uart_linecoding = {
 	.datatype = 8};
 
 void HAL_MspInit(void);
+void gpio_rs485_dir_init(void);
+void gpio_rs485_dir_set(GPIO_PinState state);
 
 uint8_t CDC_SetLineCoding_CB(USBD_CDC_LineCodingTypeDef linecoding)
 {
@@ -47,9 +50,16 @@ uint8_t CDC_SetLineCoding_CB(USBD_CDC_LineCodingTypeDef linecoding)
 	return 0;
 }
 
-USBD_CDC_LineCodingTypeDef CDC_GetLineCoding_CB(void)
+void CDC_GetLineCoding_CB(uint8_t* buf)
 {
-	return uart_linecoding;
+	buf[0] = (uint8_t)(uart_linecoding.bitrate);
+	buf[1] = (uint8_t)(uart_linecoding.bitrate >> 8);
+	buf[2] = (uint8_t)(uart_linecoding.bitrate >> 16);
+	buf[3] = (uint8_t)(uart_linecoding.bitrate >> 24);
+
+	buf[4] = uart_linecoding.format;
+	buf[5] = uart_linecoding.paritytype;
+	buf[6] = uart_linecoding.datatype;
 }
 
 void CDC_Receive_FC_CB(uint8_t *Buf, uint16_t Len)
@@ -73,14 +83,6 @@ void UART_IdleCallback(UART_HandleTypeDef *huart)
 	UNUSED(huart);
 }
 
-// void UART_TcCallback(UART_HandleTypeDef *huart)
-// {
-// 	UNUSED(huart);
-
-// 	gpio_rs485_dir_set(GPIO_PIN_RESET);
-// 	uart_tx_busy = false;
-// }
-
 /**
  * @brief USART Error Callback.
  * @param huart USART Handler.
@@ -101,8 +103,6 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
 	if (huart->Instance == USART1)
 	{
-		// __HAL_UART_CLEAR_FLAG(huart, UART_FLAG_TC);
-		// __HAL_UART_ENABLE_IT(huart, UART_IT_TC);
 		gpio_rs485_dir_set(GPIO_PIN_RESET);
 		uart_tx_busy = false;
 	}
@@ -210,18 +210,39 @@ int main(void)
 	HAL_Init();
 
 	rcc_init();
+#ifdef DEBUG
 	gpio_init();
+#endif
+	gpio_rs485_dir_init();
 	uart_init(uart_linecoding.bitrate, uart_linecoding.paritytype, uart_linecoding.format);
 
+	// Кольцевой буфер передачи UART.
 	buffer_init(&uart_tx_buf, uart_tx_data, sizeof(uart_tx_data), NULL, NULL);
+
+
+	// Кольцевой буфер приема UART.
+	// DMA автоматичесски пишет данные в буфер uart_rx_data в кольцевом режиме.
+	// Функция dma_istart_cb при вызове buffer_get уведомляет буфер о текущем индексе DMA.
+	// Поэтому не нужно вызывать функцию buffer_append для этого буфера.
 	buffer_init(&uart_rx_buf, uart_rx_data, sizeof(uart_rx_data), NULL, dma_istart_cb);
+
+
+	buffer_handle_t *alloc_buf = malloc(sizeof(buffer_handle_t));
+	if (alloc_buf == NULL) {
+		Error_Handler();
+	}
+	buffer_init(alloc_buf, uart_tx_data, sizeof(uart_tx_data), NULL, NULL);
+
+	free(alloc_buf);
 
 	buffer_test();
 
 	usb_device_init();
 
-	uint32_t ticks = 0;
 
+#ifdef DEBUG
+	uint32_t ticks = 0;
+#endif
 	size_t tx_len = 0;
 	uint8_t tx_buf[256] = {0};
 
@@ -298,6 +319,8 @@ int main(void)
 			}
 		}
 
+
+#ifdef DEBUG
 		// Светодиодная индикация.
 		ticks++;
 		if (ticks >= 1000)
@@ -305,6 +328,7 @@ int main(void)
 			ticks = 0;
 			gpio_debug_led_toggle();
 		}
+#endif /* DEBUG */
 
 		HAL_Delay(1);
 	}
@@ -319,6 +343,28 @@ void HAL_MspInit(void)
 	__HAL_AFIO_REMAP_SWJ_NOJTAG();
 }
 
+
+void gpio_rs485_dir_init(void)
+{
+	__HAL_RCC_GPIOB_CLK_ENABLE();
+	GPIO_InitTypeDef GPIO_InitStruct = {0};
+	// RS485 Direction control.
+	HAL_GPIO_WritePin(RS485_DIR_PORT, RS485_DIR_PIN, GPIO_PIN_RESET);
+
+	GPIO_InitStruct.Pin = RS485_DIR_PIN;
+	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+	HAL_GPIO_Init(RS485_DIR_PORT, &GPIO_InitStruct);
+}
+
+
+void gpio_rs485_dir_set(GPIO_PinState state)
+{
+	HAL_GPIO_WritePin(RS485_DIR_PORT, RS485_DIR_PIN, state);
+}
+
+
+
 /**
  * @brief  This function is executed in case of error occurrence.
  * @retval None
@@ -330,6 +376,14 @@ void Error_Handler(void)
 	{
 	}
 }
+
+
+
+
+
+
+
+
 
 #ifdef USE_FULL_ASSERT
 /**
