@@ -367,9 +367,8 @@ void CLI_Interface_SPI(char *args)
 		}
 
 		char *endptr;
-		long int num;
 
-		num = strtol(data, &endptr, 10);
+		uint8_t num = (uint8_t)strtol(data, &endptr, 10);
 		if (endptr == data)
 		{
 			CLI_Help("spi");
@@ -381,20 +380,28 @@ void CLI_Interface_SPI(char *args)
 			return;
 		}
 
-		uint32_t res = CLI_IF_SPI_Speed((uint8_t)num);
+		uint32_t res = CLI_IF_SPI_Speed(num);
 
 		if (res == CLI_IF_ERR_SPI_OPENED)
 		{
 			printf("\n\r");
 			printf("  ERROR: SPI Port not closed!\n\r");
 			printf("\n\r");
+			return;
 		}
-		else if (res == CLI_IF_ERR_VALUE)
+
+		if (res == CLI_IF_ERR_VALUE)
 		{
 			printf("\n\r");
-			printf("  ERROR: SPI Speed Incorrect value \'%ld\'!\n\r", num);
+			printf("  ERROR: SPI Speed Incorrect value \'%s\'!\n\r", data);
 			printf("\n\r");
+			return;
 		}
+
+		printf("\n\r");
+		printf("  INFO: SPI Speed Set value \'%s\'!\n\r", data);
+		printf("\n\r");
+
 		return;
 	}
 	else if (strcmp(command, "mode") == 0)
@@ -406,9 +413,8 @@ void CLI_Interface_SPI(char *args)
 		}
 
 		char *endptr;
-		long int num;
 
-		num = strtol(data, &endptr, 10);
+		uint8_t num = (uint8_t)strtol(data, &endptr, 10);
 
 		if (endptr == data)
 		{
@@ -421,21 +427,29 @@ void CLI_Interface_SPI(char *args)
 			return;
 		}
 
-		uint32_t res = CLI_IF_SPI_Mode((uint8_t)num);
+		uint32_t res = CLI_IF_SPI_Mode(num);
 
 		if (res == CLI_IF_ERR_SPI_OPENED)
 		{
 			printf("\n\r");
 			printf("  ERROR: SPI Port not closed!\n\r");
 			printf("\n\r");
+			return;
 		}
-		else if (res == CLI_IF_ERR_VALUE)
+
+		if (res == CLI_IF_ERR_VALUE)
 		{
 			printf("\n\r");
-			printf("  ERROR: SPI Mode Incorrect value \'%ld\'!\n\r", num);
+			printf("  ERROR: SPI Mode Incorrect value \'%s\'!\n\r", data);
 			printf("\n\r");
+			return;
 		}
+
+		printf("\n\r");
+		printf("  INFO: SPI Mode Set value \'%s\'!\n\r", data);
+		printf("\n\r");
 		return;
+
 	}
 	else
 	{
