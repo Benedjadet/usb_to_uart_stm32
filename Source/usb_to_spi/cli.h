@@ -8,12 +8,13 @@ extern "C" {
 #endif
 
 
-#define CLI_MAX_LINE     64
-#define CLI_HISTORY_SIZE 5
+#define CLI_MAX_LINE     256
+#define CLI_HISTORY_SIZE 16
 
 
 
 void CLI_Input(uint8_t ch);
+void CLI_Header(void);
 
 
 #ifdef __cplusplus
