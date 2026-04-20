@@ -45,6 +45,12 @@ void CLI_Process(char *args)
 	// Получаем название функции.
 	char *func = strtok(args, " ");
 
+	if (!func)
+	{
+		CLI_Help(NULL);
+		return;
+	}
+
 	// Получаем остальную строку.
 	char *data = strtok(NULL, "");
 
@@ -65,13 +71,27 @@ void CLI_Process(char *args)
 	}
 	else
 	{
+
 		printf("\n\r");
 		printf("  ERROR: Unknown interface \'%s\'!\n\r", func);
 		printf("\n\r");
+
 		// Неизвестная функция.
 		// Выводим Help по функциям
 		CLI_Help(NULL);
 	}
+}
+
+static int CLI_IsAllowedChar(uint8_t ch)
+{
+	if ((ch >= 'a' && ch <= 'z') ||
+		(ch >= 'A' && ch <= 'Z') ||
+		(ch >= '0' && ch <= '9') ||
+		ch == ' ' || ch == '_' || ch == '-' || ch == '.')
+	{
+		return 1;
+	}
+	return 0;
 }
 
 /**
@@ -132,6 +152,12 @@ void CLI_Input(uint8_t ch)
 		}
 
 		// обычный символ
+
+		if (!CLI_IsAllowedChar(ch))
+		{
+			return; // игнорируем всё лишнее
+		}
+
 		if (cli_len < CLI_MAX_LINE - 1)
 		{
 			cli_line[cursor++] = ch;
@@ -235,12 +261,6 @@ void CLI_Interface_SPI(char *args)
 		memset(rx, 0, sizeof(rx));
 
 		int len = parse_bytes(data, tx, sizeof(tx));
-
-		// SPI_Select();
-
-		// HAL_SPI_Transmit(&SPI_HANDLE, tx, len, HAL_MAX_DELAY);
-
-		// SPI_Unselect();
 
 		uint32_t res = CLI_IF_SPI_Transmit(tx, len);
 
@@ -452,7 +472,6 @@ void CLI_Interface_SPI(char *args)
 		printf("  INFO: SPI Mode Set value \'%s\'!\n\r", data);
 		printf("\n\r");
 		return;
-
 	}
 	else
 	{
@@ -473,7 +492,6 @@ void CLI_Interface_GPIO(char *args)
 
 	char *command = strtok(args, " ");
 	char *data = strtok(NULL, "");
-
 
 	if (!command)
 	{
@@ -520,7 +538,7 @@ void CLI_Interface_GPIO(char *args)
 			printf("\n\r");
 			return;
 		}
-		else if (CLI_IF_GPIO_Write(gpio) != CLI_IF_OK)
+		else if (res != CLI_IF_OK)
 		{
 			printf("\n\r");
 			printf("  ERROR: GPIO Can't write!\n\r");
@@ -532,7 +550,44 @@ void CLI_Interface_GPIO(char *args)
 		printf("  INFO: GPIO Write command.\n\r");
 		printf("\n\r");
 		return;
-	} else {
+	}
+	else if (strcmp(command, "mode") == 0)
+	{
+
+		uint8_t mode = 0;
+		int len = parse_bytes(data, &mode, 1);
+
+		if (len == 0)
+		{
+			CLI_Help("gpio");
+			return;
+		}
+
+		uint32_t res = CLI_IF_GPIO_Mode(mode);
+
+		if (res == CLI_IF_ERR_VALUE)
+		{
+			printf("\n\r");
+			printf("  ERROR: GPIO Incorrect value \'%s\'!\n\r", data);
+			printf("\n\r");
+			return;
+		}
+		else if (res != CLI_IF_OK)
+		{
+			printf("\n\r");
+			printf("  ERROR: GPIO Can't set mode!\n\r");
+			printf("\n\r");
+			return;
+		}
+
+		printf("\n\r");
+		printf("  INFO: GPIO Mode command.\n\r");
+		printf("\n\r");
+		return;
+	}
+
+	else
+	{
 
 		printf("\n\r");
 		printf("  ERROR: Unknown command \'%s\'!\n\r", command);

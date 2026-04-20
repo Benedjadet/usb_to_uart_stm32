@@ -7,7 +7,7 @@ static uint8_t g_mode = 0;
 
 static uint8_t g_port_opened = false;
 
-//extern buffer_handle_t to_console;
+// extern buffer_handle_t to_console;
 extern gpio_t gpios[SPI_GPIO_MAX];
 
 uint32_t CLI_IF_SPI_Open(void)
@@ -78,7 +78,6 @@ uint32_t CLI_IF_SPI_Transmit(uint8_t *txdata, size_t len)
 		return CLI_IF_ERR_SPI_HARDWARE;
 	}
 
-
 	return CLI_IF_OK;
 }
 
@@ -129,6 +128,31 @@ uint32_t CLI_IF_GPIO_Write(uint8_t gpio)
 			state = GPIO_PIN_SET;
 		}
 		HAL_GPIO_WritePin(gpios[i].port, gpios[i].pin, state);
+	}
+
+	return CLI_IF_OK;
+}
+
+uint32_t CLI_IF_GPIO_Mode(uint8_t mode)
+{
+
+	GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+	for (uint32_t i = 0; i < SPI_GPIO_MAX; i++)
+	{
+		GPIO_InitStruct.Pin = gpios[i].pin;
+		if ((mode & (1 << i)) != RESET)
+		{
+			GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+			GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+		}
+		else
+		{
+			GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+			GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+		}
+
+		HAL_GPIO_Init(gpios[i].port, &GPIO_InitStruct);
 	}
 
 	return CLI_IF_OK;
