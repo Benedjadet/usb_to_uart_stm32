@@ -65,6 +65,9 @@ void CLI_Process(char *args)
 	}
 	else
 	{
+		printf("\n\r");
+		printf("  ERROR: Unknown interface \'%s\'!\n\r", func);
+		printf("\n\r");
 		// Неизвестная функция.
 		// Выводим Help по функциям
 		CLI_Help(NULL);
@@ -456,6 +459,8 @@ void CLI_Interface_SPI(char *args)
 		printf("\n\r");
 		printf("  ERROR: Unknown command \'%s\'!\n\r", command);
 		printf("\n\r");
+
+		CLI_Help("spi");
 	}
 }
 
@@ -527,6 +532,13 @@ void CLI_Interface_GPIO(char *args)
 		printf("  INFO: GPIO Write command.\n\r");
 		printf("\n\r");
 		return;
+	} else {
+
+		printf("\n\r");
+		printf("  ERROR: Unknown command \'%s\'!\n\r", command);
+		printf("\n\r");
+
+		CLI_Help("gpio");
 	}
 }
 
