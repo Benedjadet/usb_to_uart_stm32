@@ -13,7 +13,10 @@ extern "C" {
 
 
 
-void CLI_Input(uint8_t ch);
+
+
+//void CLI_Input(uint8_t ch);
+void CLI_Process(int argc, const char *const *);
 void CLI_Header(void);
 
 

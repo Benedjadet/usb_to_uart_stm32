@@ -1,13 +1,20 @@
 
 
 #include "cli_help.h"
+#include "cli_defs.h"
 #include "stdio.h"
 #include "string.h"
 #include "stdlib.h"
 
-void CLI_Help(char *args)
+
+void CLI_Help_SPI(void);
+void CLI_Halp_GPIO(void);
+
+
+
+void CLI_Help(const char *arg)
 {
-	if (args == NULL)
+	if (arg == NULL)
 	{
 		// Выводим общую справку.
 		printf("Usage: INTERFACE COMMAND [ARGS]\n\r");
@@ -15,16 +22,17 @@ void CLI_Help(char *args)
 		printf("Interfaces:\n\r");
 		printf("  spi <CMD>\tSerial Peripheral Interface.\n\r");
 		printf("  gpio <CMD>\tGeneral-Purpose Input/Output.\n\r");
+		printf("Help:\n\r");
 		printf("  help <IF>\tInterface help page.\n\r");
 		printf("\n\r");
 		return;
 	}
 
-	char *interface = strtok(args, " ");
+	const char *interface = arg;
 
 	if (strcmp(interface, "spi") == 0)
 	{
-		CLI_Halp_SPI();
+		CLI_Help_SPI();
 	}
 	else if (strcmp(interface, "gpio") == 0)
 	{
@@ -33,12 +41,12 @@ void CLI_Help(char *args)
 	else
 	{
 		printf("\n\r");
-		printf("  ERROR: Unknown interface \'%s\'!\n\r", interface);
+		printf("  %s: Unknown interface \'%s\'!\n\r", MSG_ERROR_HEADER, interface);
 		printf("\n\r");
 	}
 }
 
-void CLI_Halp_SPI(void)
+void CLI_Help_SPI(void)
 {
 	printf("Usage: spi COMMAND [ARGS]\n\r");
 	printf("\n\r");
@@ -79,6 +87,6 @@ void CLI_Halp_GPIO(void)
 	printf("Commands:\n\r");
 	printf("  read\t\tRead GPIO state.\n\r");
 	printf("  write <DATA>\tWrite GPIO state.\n\r");
-	printf("  mode <MODE>\tSet GPIO mode 0 - Input, 1 - Output (Default).\n\r");
+	printf("  mode [<MODE>]\tSet GPIO mode 0 - Input, 1 - Output (Default).\n\r");
 	printf("\n\r");
 }

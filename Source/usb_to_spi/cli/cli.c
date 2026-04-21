@@ -6,6 +6,7 @@
 #include "spi1.h"
 #include "stdlib.h"
 // #include "cmdp_spi.h"
+#include "cli_defs.h"
 #include "cli_help.h"
 #include "cli_if.h"
 
@@ -26,54 +27,60 @@ static char history[CLI_HISTORY_SIZE][CLI_MAX_LINE];
 static int history_count = 0;
 static int history_index = -1;
 
-void CLI_Process(char *args);
-void CLI_Interface_SPI(char *args);
-void CLI_Interface_GPIO(char *args);
+void CLI_Interface_SPI(int argc, const char *const *argv);
+void CLI_Interface_GPIO(int argc, const char *const *argv);
 
 void SPI_Select(void);
 void SPI_Unselect(void);
 
 static uint8_t hex_to_byte(const char *str);
-static int parse_bytes(char *cmd, uint8_t *buf, int max_len);
+static int parse_bytes(int argc, const char *const *argv, uint8_t *buf, int max_len);
 
 /**
  * @brief Функция обработки коммандной строки.
  * @param args
  */
-void CLI_Process(char *args)
+void CLI_Process(int argc, const char *const *argv)
 {
 	// Получаем название функции.
-	char *func = strtok(args, " ");
-
-	if (!func)
+	if (argc == 0)
 	{
 		CLI_Help(NULL);
 		return;
 	}
 
-	// Получаем остальную строку.
-	char *data = strtok(NULL, "");
+	const char *interface = argv[0];
 
-	if (strcmp(func, "spi") == 0)
+	// Получаем остальную строку.
+	// char *data = strtok(NULL, "");
+	// char* data = '\0';
+	const char *const *data = NULL;
+	argc -= 1;
+	if (argc > 0)
+	{
+		data = &argv[1];
+	}
+
+	if (strcmp(interface, "spi") == 0)
 	{
 		// Функция SPI.
-		CLI_Interface_SPI(data);
+		CLI_Interface_SPI(argc, data);
 	}
-	else if (strcmp(args, "gpio") == 0)
+	else if (strcmp(interface, "gpio") == 0)
 	{
 		// Функция GPIO.
-		CLI_Interface_GPIO(data);
+		CLI_Interface_GPIO(argc, data);
 	}
-	else if (strcmp(args, "help") == 0)
+	else if (strcmp(interface, "help") == 0)
 	{
 		// Инструкция.
-		CLI_Help(data);
+		CLI_Help(data[0]);
 	}
 	else
 	{
 
 		printf("\n\r");
-		printf("  ERROR: Unknown interface \'%s\'!\n\r", func);
+		printf("  %s: Unknown interface \'%s\'!\n\r", MSG_ERROR_HEADER, interface);
 		printf("\n\r");
 
 		// Неизвестная функция.
@@ -126,7 +133,7 @@ void CLI_Input(uint8_t ch)
 
 			history_index = history_count;
 
-			CLI_Process(cli_line);
+			// CLI_Process(cli_line);
 
 			cli_len = 0;
 			cursor = 0;
@@ -223,7 +230,8 @@ void CLI_Header(void)
 	printf("STM32 SPI CLI v1.0\n\r");
 	printf("Build: %s %s\n\r", __DATE__, __TIME__);
 	printf("Type 'help'\n\r");
-	printf("\n\r> ");
+	printf("\n\r");
+	printf("\033[32m>\033[0m ");
 	fflush(stdout);
 }
 
@@ -231,18 +239,24 @@ void CLI_Header(void)
  * @brief Парсер Интерфейс SPI.
  * @param args Аргументы.
  */
-void CLI_Interface_SPI(char *args)
+void CLI_Interface_SPI(int argc, const char *const *argv)
 {
-	// Получаем команду.
-	char *command = strtok(args, " ");
 
-	// Получаем аргументы.
-	char *data = strtok(NULL, "");
-
-	if (!command)
+	if (argc == 0)
 	{
 		CLI_Help("spi");
 		return;
+	}
+
+	// Получаем команду.
+	const char *command = argv[0];
+
+	// Получаем аргументы.
+	const char *const *data = NULL;
+	argc -= 1;
+	if (argc > 0)
+	{
+		data = &argv[1];
 	}
 
 	if (strcmp(command, "tx") == 0)
@@ -260,21 +274,21 @@ void CLI_Interface_SPI(char *args)
 		memset(tx, 0, sizeof(tx));
 		memset(rx, 0, sizeof(rx));
 
-		int len = parse_bytes(data, tx, sizeof(tx));
+		int len = parse_bytes(argc, data, tx, sizeof(tx));
 
 		uint32_t res = CLI_IF_SPI_Transmit(tx, len);
 
 		if (res == CLI_IF_ERR_SPI_CLOSED)
 		{
 			printf("\n\r");
-			printf("  ERROR: SPI port not opened!\n\r");
+			printf("  %s: SPI port not opened!\n\r", MSG_ERROR_HEADER);
 			printf("\n\r");
 			return;
 		}
 		else if (res == CLI_IF_ERR_SPI_HARDWARE)
 		{
 			printf("\n\r");
-			printf("  ERROR: SPI internal error!\n\r");
+			printf("  %s: SPI internal error!\n\r", MSG_ERROR_HEADER);
 			printf("\n\r");
 			return;
 		}
@@ -302,21 +316,21 @@ void CLI_Interface_SPI(char *args)
 		memset(tx, 0, sizeof(tx));
 		memset(rx, 0, sizeof(rx));
 
-		int len = parse_bytes(data, tx, sizeof(tx));
+		int len = parse_bytes(argc, data, tx, sizeof(tx));
 
 		uint32_t res = CLI_IF_SPI_Tranceive(tx, rx, len);
 
 		if (res == CLI_IF_ERR_SPI_CLOSED)
 		{
 			printf("\n\r");
-			printf("  ERROR: SPI port not opened!\n\r");
+			printf("  %s: SPI port not opened!\n\r", MSG_ERROR_HEADER);
 			printf("\n\r");
 			return;
 		}
 		else if (res == CLI_IF_ERR_SPI_HARDWARE)
 		{
 			printf("\n\r");
-			printf("  ERROR: SPI internal error!\n\r");
+			printf("  %s: SPI internal error!\n\r", MSG_ERROR_HEADER);
 			printf("\n\r");
 			return;
 		}
@@ -341,20 +355,20 @@ void CLI_Interface_SPI(char *args)
 		if (res == CLI_IF_ERR_SPI_OPENED)
 		{
 			printf("\n\r");
-			printf("  ERROR: SPI port is already open!\n\r");
+			printf("  %s: SPI port is already open!\n\r", MSG_ERROR_HEADER);
 			printf("\n\r");
 			return;
 		}
 		else if (res != CLI_IF_OK)
 		{
 			printf("\n\r");
-			printf("  ERROR: SPI Can't open port!\n\r");
+			printf("  %s: SPI Can't open port!\n\r", MSG_ERROR_HEADER);
 			printf("\n\r");
 			return;
 		}
 
 		printf("\n\r");
-		printf("  INFO: SPI Port opened.\n\r");
+		printf("  %s: SPI Port opened.\n\r", MSG_INFO_HEADER);
 		printf("\n\r");
 		return;
 	}
@@ -364,20 +378,20 @@ void CLI_Interface_SPI(char *args)
 		if (res == CLI_IF_ERR_SPI_CLOSED)
 		{
 			printf("\n\r");
-			printf("  ERROR: SPI port is already closed!\n\r");
+			printf("  %s: SPI port is already closed!\n\r", MSG_ERROR_HEADER);
 			printf("\n\r");
 			return;
 		}
 		else if (res != CLI_IF_OK)
 		{
 			printf("\n\r");
-			printf("  ERROR: SPI Can't close port!\n\r");
+			printf("  %s: SPI Can't close port!\n\r", MSG_ERROR_HEADER);
 			printf("\n\r");
 			return;
 		}
 
 		printf("\n\r");
-		printf("  INFO: SPI Port closed.\n\r");
+		printf("  %s: SPI Port closed.\n\r", MSG_INFO_HEADER);
 		printf("\n\r");
 		return;
 	}
@@ -391,8 +405,8 @@ void CLI_Interface_SPI(char *args)
 
 		char *endptr;
 
-		uint8_t num = (uint8_t)strtol(data, &endptr, 10);
-		if (endptr == data)
+		uint8_t num = (uint8_t)strtol(data[0], &endptr, 10);
+		if (endptr == data[0])
 		{
 			CLI_Help("spi");
 			return;
@@ -408,7 +422,7 @@ void CLI_Interface_SPI(char *args)
 		if (res == CLI_IF_ERR_SPI_OPENED)
 		{
 			printf("\n\r");
-			printf("  ERROR: SPI Port not closed!\n\r");
+			printf("  %s: SPI Port not closed!\n\r", MSG_ERROR_HEADER);
 			printf("\n\r");
 			return;
 		}
@@ -416,13 +430,13 @@ void CLI_Interface_SPI(char *args)
 		if (res == CLI_IF_ERR_VALUE)
 		{
 			printf("\n\r");
-			printf("  ERROR: SPI Speed Incorrect value \'%s\'!\n\r", data);
+			printf("  %s: SPI Speed Incorrect value \'%s\'!\n\r", MSG_ERROR_HEADER, data[0]);
 			printf("\n\r");
 			return;
 		}
 
 		printf("\n\r");
-		printf("  INFO: SPI Speed Set value \'%s\'!\n\r", data);
+		printf("  %s: SPI Speed Set value \'%s\'!\n\r", MSG_INFO_HEADER, data[0]);
 		printf("\n\r");
 
 		return;
@@ -437,9 +451,9 @@ void CLI_Interface_SPI(char *args)
 
 		char *endptr;
 
-		uint8_t num = (uint8_t)strtol(data, &endptr, 10);
+		uint8_t num = (uint8_t)strtol(data[0], &endptr, 10);
 
-		if (endptr == data)
+		if (endptr == data[0])
 		{
 			CLI_Help("spi");
 			return;
@@ -455,7 +469,7 @@ void CLI_Interface_SPI(char *args)
 		if (res == CLI_IF_ERR_SPI_OPENED)
 		{
 			printf("\n\r");
-			printf("  ERROR: SPI Port not closed!\n\r");
+			printf("  %s: SPI Port not closed!\n\r", MSG_ERROR_HEADER);
 			printf("\n\r");
 			return;
 		}
@@ -463,20 +477,20 @@ void CLI_Interface_SPI(char *args)
 		if (res == CLI_IF_ERR_VALUE)
 		{
 			printf("\n\r");
-			printf("  ERROR: SPI Mode Incorrect value \'%s\'!\n\r", data);
+			printf("  %s: SPI Mode Incorrect value \'%s\'!\n\r", MSG_ERROR_HEADER, data[0]);
 			printf("\n\r");
 			return;
 		}
 
 		printf("\n\r");
-		printf("  INFO: SPI Mode Set value \'%s\'!\n\r", data);
+		printf("  %s: SPI Mode Set value \'%s\'!\n\r", MSG_INFO_HEADER, data[0]);
 		printf("\n\r");
 		return;
 	}
 	else
 	{
 		printf("\n\r");
-		printf("  ERROR: Unknown command \'%s\'!\n\r", command);
+		printf("  %s: Unknown command \'%s\'!\n\r", MSG_ERROR_HEADER, command);
 		printf("\n\r");
 
 		CLI_Help("spi");
@@ -487,16 +501,22 @@ void CLI_Interface_SPI(char *args)
  * @brief Парсер Интерфейса GPIO.
  * @param args Аргументы.
  */
-void CLI_Interface_GPIO(char *args)
+void CLI_Interface_GPIO(int argc, const char *const *argv)
 {
 
-	char *command = strtok(args, " ");
-	char *data = strtok(NULL, "");
-
-	if (!command)
+	if (argc == 0)
 	{
 		CLI_Help("gpio");
 		return;
+	}
+
+	const char *command = argv[0];
+
+	const char *const *data = NULL;
+	argc -= 1;
+	if (argc > 0)
+	{
+		data = &argv[1];
 	}
 
 	if (strcmp(command, "read") == 0)
@@ -506,7 +526,7 @@ void CLI_Interface_GPIO(char *args)
 		if (CLI_IF_GPIO_Read(&gpio) != CLI_IF_OK)
 		{
 			printf("\n\r");
-			printf("  ERROR: GPIO Can't read!\n\r");
+			printf("  %s: GPIO Can't read!\n\r", MSG_ERROR_HEADER);
 			printf("\n\r");
 			return;
 		}
@@ -521,7 +541,7 @@ void CLI_Interface_GPIO(char *args)
 	{
 
 		uint8_t gpio = 0;
-		int len = parse_bytes(data, &gpio, 1);
+		int len = parse_bytes(argc, data, &gpio, 1);
 
 		if (len == 0)
 		{
@@ -534,20 +554,20 @@ void CLI_Interface_GPIO(char *args)
 		if (res == CLI_IF_ERR_VALUE)
 		{
 			printf("\n\r");
-			printf("  ERROR: GPIO Incorrect value \'%s\'!\n\r", data);
+			printf("  %s: GPIO Incorrect value \'%s\'!\n\r", MSG_ERROR_HEADER, data[0]);
 			printf("\n\r");
 			return;
 		}
 		else if (res != CLI_IF_OK)
 		{
 			printf("\n\r");
-			printf("  ERROR: GPIO Can't write!\n\r");
+			printf("  %s: GPIO Can't write!\n\r", MSG_ERROR_HEADER);
 			printf("\n\r");
 			return;
 		}
 
 		printf("\n\r");
-		printf("  INFO: GPIO Write command.\n\r");
+		printf("  %s: GPIO Write command.\n\r", MSG_INFO_HEADER);
 		printf("\n\r");
 		return;
 	}
@@ -555,33 +575,43 @@ void CLI_Interface_GPIO(char *args)
 	{
 
 		uint8_t mode = 0;
-		int len = parse_bytes(data, &mode, 1);
-
-		if (len == 0)
+		if (argc == 0)
 		{
-			CLI_Help("gpio");
+			if (CLI_IF_GPIO_ModeGet(&mode) != CLI_IF_OK)
+			{
+				printf("\n\r");
+				printf("  %s: GPIO Can't get mode!\n\r", MSG_ERROR_HEADER);
+				printf("\n\r");
+				return;
+			}
+
+			printf("\n\r");
+			printf("  GPIO: mode %02X.\n\r", mode);
+			printf("\n\r");
 			return;
 		}
 
-		uint32_t res = CLI_IF_GPIO_Mode(mode);
+		parse_bytes(argc, data, &mode, 1);
+
+		uint32_t res = CLI_IF_GPIO_ModeSet(mode);
 
 		if (res == CLI_IF_ERR_VALUE)
 		{
 			printf("\n\r");
-			printf("  ERROR: GPIO Incorrect value \'%s\'!\n\r", data);
+			printf("  %s: GPIO Incorrect value \'%s\'!\n\r", MSG_ERROR_HEADER, data[0]);
 			printf("\n\r");
 			return;
 		}
 		else if (res != CLI_IF_OK)
 		{
 			printf("\n\r");
-			printf("  ERROR: GPIO Can't set mode!\n\r");
+			printf("  %s: GPIO Can't set mode!\n\r", MSG_ERROR_HEADER);
 			printf("\n\r");
 			return;
 		}
 
 		printf("\n\r");
-		printf("  INFO: GPIO Mode command.\n\r");
+		printf("  %s: GPIO Mode command.\n\r", MSG_INFO_HEADER);
 		printf("\n\r");
 		return;
 	}
@@ -590,7 +620,7 @@ void CLI_Interface_GPIO(char *args)
 	{
 
 		printf("\n\r");
-		printf("  ERROR: Unknown command \'%s\'!\n\r", command);
+		printf("  %s: Unknown command \'%s\'!\n\r", MSG_ERROR_HEADER, command);
 		printf("\n\r");
 
 		CLI_Help("gpio");
@@ -599,21 +629,28 @@ void CLI_Interface_GPIO(char *args)
 
 /**
  * @brief Преобразует строку типа "1F CA 03" в массив байт.
- * @param cmd Строка в HEX формате.
+ * @param argv Строка в HEX формате.
  * @param buf Массив назначения.
  * @param max_len Длина массива.
  * @return Количество байт в массиве.
  */
-static int parse_bytes(char *cmd, uint8_t *buf, int max_len)
+static int parse_bytes(int argc, const char *const *argv, uint8_t *buf, int max_len)
 {
 	int len = 0;
 
-	char *token = strtok(cmd, " ");
+	// const char *token = argv[len];
 
-	while (token && len < max_len)
+	// while (token && len < max_len )
+	// {
+	// 	buf[len++] = hex_to_byte(token);
+	// 	token = argv[len];
+	// }
+
+
+	for ( int i = 0; i < argc && i < max_len ; i++)
 	{
-		buf[len++] = hex_to_byte(token);
-		token = strtok(NULL, " ");
+		buf[i] = hex_to_byte(argv[i]);
+		len++;
 	}
 
 	return len;

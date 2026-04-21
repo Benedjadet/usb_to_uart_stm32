@@ -26,7 +26,8 @@ extern "C"
 
 	uint32_t CLI_IF_GPIO_Read(uint8_t *gpio);
 	uint32_t CLI_IF_GPIO_Write(uint8_t gpio);
-	uint32_t CLI_IF_GPIO_Mode(uint8_t mode);
+	uint32_t CLI_IF_GPIO_ModeSet(uint8_t mode);
+	uint32_t CLI_IF_GPIO_ModeGet(uint8_t *mode);
 
 #ifdef __cplusplus
 }

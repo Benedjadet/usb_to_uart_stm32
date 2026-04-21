@@ -133,7 +133,7 @@ uint32_t CLI_IF_GPIO_Write(uint8_t gpio)
 	return CLI_IF_OK;
 }
 
-uint32_t CLI_IF_GPIO_Mode(uint8_t mode)
+uint32_t CLI_IF_GPIO_ModeSet(uint8_t mode)
 {
 
 	GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -153,6 +153,46 @@ uint32_t CLI_IF_GPIO_Mode(uint8_t mode)
 		}
 
 		HAL_GPIO_Init(gpios[i].port, &GPIO_InitStruct);
+	}
+
+	return CLI_IF_OK;
+}
+
+uint32_t CLI_IF_GPIO_ModeGet(uint8_t *mode)
+{
+	*mode = 0;
+
+	for (uint32_t i = 0; i < SPI_GPIO_MAX; i++)
+	{
+
+		uint32_t pin_num = 0;
+		uint32_t pin_mode = 0;
+
+		// вычисляем номер пина
+		while ((gpios[i].pin >> pin_num) != 1)
+		{
+			pin_num++;
+		}
+
+		// вычисляем режим пина.
+		if (pin_num < 8)
+		{
+			pin_mode = (gpios[i].port->CRL >> (pin_num * 4)) & GPIO_CRL_MODE0_Msk;
+		}
+		else
+		{
+			pin_mode = (gpios[i].port->CRH >> ((pin_num - 8) * 4)) & GPIO_CRH_MODE8_Msk;
+		}
+
+		// устанавливаем/сбрасываем бит режима.
+		if (pin_mode == 0x0)
+		{
+			*mode &= ~(1 << i);
+		}
+		else
+		{
+			*mode |= (1 << i);
+		}
 	}
 
 	return CLI_IF_OK;

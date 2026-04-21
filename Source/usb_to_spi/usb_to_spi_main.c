@@ -9,6 +9,7 @@
 #include "gpio.h"
 #include "stdio.h"
 #include "cli.h"
+#include "microrl.h"
 
 // UART TX buffer.
 uint8_t spi_tx_data[SPI_TX_BUF_SIZE] = {0};
@@ -125,6 +126,64 @@ void CDC_Receive_FC_CB(uint8_t *Buf, uint16_t Len)
 	buffer_append(&from_console, Buf, Len);
 }
 
+void microrl_print(const char *ch)
+{
+	printf("%s", ch);
+	fflush(stdout);
+}
+
+int microrl_execute(int argc, const char *const *argv)
+{
+	CLI_Process(argc, argv);
+	return 0;
+}
+
+/**
+ * @brief Функция позволяющая работать с терминалами, которые присылают разные последовательности конца строки.
+ * @param pThis экземпляр microrl_t.
+ * @param ch Символ, который был получен из терминала.
+ */
+void microrl_insert_char_ext(microrl_t *pThis, int ch)
+{
+
+	static int last_ch = 0;
+
+	// На случай если терминал присылает только CR или CRLF.
+	if (ch == '\r')
+	{
+		if (last_ch == '\n')
+		{
+			last_ch = 0;
+			return;
+		}
+
+		microrl_insert_char(pThis, '\n');
+		microrl_insert_char(pThis, '\r');
+		last_ch = ch;
+		return;
+	}
+	// На случай если терминал присылает толкт LF или LFCR.
+	else if (ch == '\n')
+	{
+		if (last_ch == '\r')
+		{
+			last_ch = 0;
+			return;
+		}
+
+		microrl_insert_char(pThis, '\n');
+		microrl_insert_char(pThis, '\r');
+		last_ch = ch;
+		return;
+	}
+	// Ограничиваем ввод только латинскими буквами и спец символами.
+	else if ((ch >= KEY_NUL && ch <= KEY_DEL))
+	{
+		microrl_insert_char(pThis, ch);
+		last_ch = ch;
+	}
+}
+
 /**
  * @brief  The application entry point.
  * @retval int
@@ -153,6 +212,12 @@ int main(void)
 	buffer_init(&to_console, to_console_buffer, sizeof(to_console_buffer), NULL, NULL);
 	buffer_init(&from_console, from_console_buffer, sizeof(from_console_buffer), NULL, NULL);
 
+	microrl_t rl = {0};
+
+	microrl_init(&rl, microrl_print);
+
+	microrl_set_execute_callback(&rl, microrl_execute);
+
 	while (1)
 	{
 
@@ -165,7 +230,10 @@ int main(void)
 		{
 			tx_len = 1;
 			buffer_get(&from_console, tx_buf, &tx_len);
-			CLI_Input(tx_buf[0]);
+			// CLI_Input(tx_buf[0]);
+			//printf("%02X\n\r", tx_buf[0]);
+
+			microrl_insert_char_ext(&rl, tx_buf[0]);
 		}
 
 		// Отправка данных в UART.
