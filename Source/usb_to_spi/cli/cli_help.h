@@ -7,12 +7,7 @@ extern "C" {
 #endif
 
 
-void CLI_Help(char *args);
-
-void CLI_Halp_SPI(void);
-
-void CLI_Halp_GPIO(void);
-
+void CLI_Help(const char *arg);
 
 #ifdef __cplusplus
 }
